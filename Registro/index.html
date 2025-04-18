@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <form id="miFormulario">
+
+        <h2>Registro</h2>
+        <div class="form-txt">
+            <a href="#">Política de privacidad</a>
+            <a href="#">Términos y condiciones</a>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="name" placeholder="Nombres" required>
+            <input type="text" id="apellido" placeholder="Apellidos" required>
+            <input type="text" id="num_cedula" placeholder="Numero de cedula" required>
+            <label for="fecha_expedicion">Fecha de Expedición (Ejemplo: dd/mm/aaaa)</label>
+            <input type="date" id="fecha_expedicion" placeholder="Fecha expedicion" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id ="contraseña" placeholder="Contraseña" required maxlength="15">
+            <label for="fecha">Fecha de Nacimiento (Ejemplo: dd/mm/aaaa)</label>
+            <input type="date" id="fecha" placeholder="Fecha Nacimiento" required>
+            <input type="text" id="telefono" placeholder="Teléfono" oninput="validarTelefono(this)" maxlength="10" required>
+            <input class="btn" type="submit" value="Registrar">
+            <input class="btn2" type="button" value="Limpiar" onclick="resetFormulario()">
+            <div class="register-link">
+                <p>¿Ya tiene cuenta? <a href="#"> Inicie sesión</a></p>
+            </div>
+        </div>
+
+    </form>
+
+    <script type="text/javascript" src="index.js"></script>
+</body>
+</html>
