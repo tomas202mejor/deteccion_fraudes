@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enviar Transacción</title>
+    <link rel="stylesheet" href="styles_1.css"> <!-- Enlace al CSS -->
+</head>
+<body>
+    <div class="container">
+        
+        <form id="transaction-form">
+            <h2>Transacción</h2>
+
+            <input type="text" id="Num_cuenta" placeholder="Numero de cuenta" name="Num_cuenta" required>
+
+            <input type="text" id="Nombre" placeholder="Nombre" name="Nombre" required>
+            
+            <input type="number" id="amount" placeholder="Monto" name="amount" required>
+            
+            <textarea type="text" id="descripcion" placeholder="Mensaje" name="descripcion" required></textarea>
+
+            <button type="submit">Enviar Transacción</button>
+        </form>
+        <div id="result"></div>
+    </div>
+    
+    <script src="script.js"></script> <!-- Enlace al JS -->
+</body>
+</html>
