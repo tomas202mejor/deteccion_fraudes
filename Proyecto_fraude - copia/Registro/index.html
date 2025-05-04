@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <form id="miFormulario" method="POST" action="registro.php">
+
+        <h2>Registro</h2>
+                        
+
+        <div class="input-group">
+            <input type="text" id="name" name="name" placeholder="Nombres" required>
+            <input type="text" id="apellido" name="apellido" placeholder="Apellidos" required>
+            <input type="number" id="num_cedula" name="num_cedula" placeholder="Numero de cedula" required>
+            <label for="fecha_expedicion">Fecha de Expedición (Ejemplo: dd/mm/aaaa)</label>
+            <input type="date" id="fecha_expedicion" name="fecha_expedicion" placeholder="Fecha expedicion" required>
+            <input type="email" id="email" name="email"placeholder="Email" required>
+            <input type="password" id="contraseña" name="password" placeholder="Contraseña" required maxlength="15">
+            <label for="fecha">Fecha de Nacimiento (Ejemplo: dd/mm/aaaa)</label>
+            <input type="date" id="fecha" name="fecha"placeholder="Fecha Nacimiento" required>
+            <input type="text" id="telefono" name="telefono" placeholder="Teléfono" maxlength="10" required>
+
+            <input class="btn" type="submit" value="Registrar">
+            <div class="register-link">
+                <p>¿Ya tiene cuenta? <a href="/Proyecto_fraude/Inicio de sesion/index.html">Inicie sesión</a></p>
+            </div>
+        </div>
+
+    </form>
+
+    <script type="text/javascript" src="index.js"></script>
+</body>
+</html>
