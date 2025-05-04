@@ -1,0 +1,7 @@
+  File "c:\Users\gokur\OneDrive\Imágenes\UbisoftConnect\sp2.py", line 14, in <module>
+    df_fragmento.to_excel(nombre_archivo, sep=";", index=False)
+  File "C:\Users\gokur\OneDrive\Imágenes\UbisoftConnect\.venv\Lib\site-packages\pandas\util\_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: NDFrame.to_excel() got an unexpected keyword argument 'sep'
+PS C:\Users\gokur\OneDrive\Imágenes\UbisoftConnect> 
