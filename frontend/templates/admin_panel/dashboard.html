@@ -1,0 +1,642 @@
+<!-- frontend/templates/admin_panel/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block title %}Panel de Administrador | Sistema de Detección de Fraude{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: all 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .debug-info {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 20px;
+        font-family: monospace;
+        font-size: 12px;
+    }
+    .loading-spinner {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+    }
+    .stat-value {
+        transition: all 0.3s ease;
+    }
+    .stat-value.updating {
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Loading Spinner -->
+<div class="loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Panel de Administrador</h2>
+        <p class="text-muted">Monitoreo de transacciones y detección de fraude</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <button class="btn btn-outline-primary me-2" onclick="refreshDashboard()">
+            <i class="fas fa-sync-alt me-2"></i>Actualizar
+        </button>
+        <a href="{% url 'admin_transactions' %}" class="btn btn-primary">
+            <i class="fas fa-list me-2"></i>Ver todas las transacciones
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas de estadísticas -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2 stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Transacciones Hoy</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800 stat-value" id="today-total">
+                            {{ stats.today.total|default:0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2 stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Monto Total (Hoy)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800 stat-value" id="today-amount">
+                            ${{ stats.today.total_amount|default:0|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2 stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Posible Fraude (Hoy)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800 stat-value" id="today-possibly-fraudulent">
+                            {{ stats.today.possibly_fraudulent|default:0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2 stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Fraude Detectado (Hoy)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800 stat-value" id="today-fraudulent">
+                            {{ stats.today.fraudulent|default:0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-bug fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos de estadísticas -->
+<div class="row mb-4">
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Transacciones por Día (Último Mes)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="transactionsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Distribución por Estado</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="mt-3 text-center">
+                    <small class="text-muted">Últimos 30 días</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertas de Fraude -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Últimas Alertas de Fraude</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Remitente</th>
+                                <th>Destinatario</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fraud-transactions-tbody">
+                            {% for transaction in fraud_transactions %}
+                            <tr>
+                                <td>{{ transaction.id|truncatechars:8 }}</td>
+                                <td>{{ transaction.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>{{ transaction.sender_name }}</td>
+                                <td>{{ transaction.receiver_name }}</td>
+                                <td>${{ transaction.amount }}</td>
+                                <td>
+                                    {% if transaction.status == 'legitimate' %}
+                                        <span class="badge bg-success">Legítima</span>
+                                    {% elif transaction.status == 'possibly_fraudulent' %}
+                                        <span class="badge bg-warning text-dark">Revisión</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Fraudulenta</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'admin_transactions' %}?id={{ transaction.id }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-search me-1"></i>Ver
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="text-muted mb-3">
+                                        <i class="fas fa-check-circle fa-3x"></i>
+                                    </div>
+                                    <p>No hay alertas de fraude recientes</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información de Debug (Solo en desarrollo) -->
+{% if DEBUG %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-info">Información de Debug</h6>
+            </div>
+            <div class="card-body">
+                <div class="debug-info">
+                    <h6>Estadísticas recibidas:</h6>
+                    <pre>{{ stats|pprint }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales para los gráficos
+    let transactionsChart = null;
+    let statusChart = null;
+    let updateInterval = null;
+
+    // Función para actualizar el dashboard
+    function refreshDashboard() {
+        console.log('Actualizando dashboard manualmente...');
+        updateDashboardStats();
+    }
+
+    // Función para inicializar los gráficos
+    function initializeCharts() {
+        // Datos desde Django
+        const statsData = {{ stats|safe|default:'{}' }};
+        
+        console.log('Datos de estadísticas recibidos:', statsData);
+        
+        // Verificar que tenemos datos
+        if (!statsData.last_month || !statsData.last_month.daily_distribution) {
+            console.error('No hay datos de distribución diaria disponibles');
+            return;
+        }
+        
+        // Preparar datos para el gráfico de líneas
+        const dailyData = statsData.last_month.daily_distribution || {};
+        const sortedDates = Object.keys(dailyData).sort();
+        const dailyValues = sortedDates.map(date => dailyData[date] || 0);
+        
+        // Formatear las fechas para mostrar
+        const formattedDates = sortedDates.map(date => {
+            const [year, month, day] = date.split('-');
+            return `${day}/${month}`;
+        });
+        
+        // Configurar gráfico de transacciones por día
+        const transactionsCtx = document.getElementById('transactionsChart');
+        if (transactionsCtx && sortedDates.length > 0) {
+            if (transactionsChart) {
+                transactionsChart.destroy();
+            }
+            
+            transactionsChart = new Chart(transactionsCtx, {
+                type: 'line',
+                data: {
+                    labels: formattedDates,
+                    datasets: [{
+                        label: 'Número de Transacciones',
+                        data: dailyValues,
+                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointBorderColor: 'rgba(78, 115, 223, 1)',
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                        pointHitRadius: 10,
+                        pointBorderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    return `Fecha: ${sortedDates[index]}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                callback: function(value) {
+                                    return Math.floor(value);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Configurar gráfico de distribución por estado
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            const monthStats = statsData.last_month || {};
+            const legitimateCount = monthStats.legitimate || 0;
+            const possiblyFraudulentCount = monthStats.possibly_fraudulent || 0;
+            const fraudulentCount = monthStats.fraudulent || 0;
+            
+            console.log('Datos para gráfico de estado:', {
+                legitimate: legitimateCount,
+                possibly_fraudulent: possiblyFraudulentCount,
+                fraudulent: fraudulentCount
+            });
+            
+            if (statusChart) {
+                statusChart.destroy();
+            }
+            
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Legítimas', 'Posible Fraude', 'Fraudulentas'],
+                    datasets: [{
+                        data: [legitimateCount, possiblyFraudulentCount, fraudulentCount],
+                        backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b'],
+                        hoverBackgroundColor: ['#17a673', '#dda20a', '#be2617'],
+                        hoverBorderColor: 'rgba(234, 236, 244, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+    }
+
+    // Función para actualizar estadísticas via AJAX
+    function updateDashboardStats() {
+        console.log('Iniciando actualización de estadísticas...');
+        
+        // Mostrar indicador de carga en las tarjetas
+        document.querySelectorAll('.stat-value').forEach(el => {
+            el.classList.add('updating');
+        });
+        
+        // Usar la URL correcta del frontend, no del microservicio directamente
+        fetch('{% url "dashboard_stats" %}', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin'  // Importante para incluir cookies de sesión
+        })
+        .then(response => {
+            console.log('Respuesta recibida:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Nuevas estadísticas recibidas:', data);
+            
+            // Actualizar tarjetas de estadísticas
+            if (data.today) {
+                document.getElementById('today-total').textContent = data.today.total || 0;
+                document.getElementById('today-amount').textContent = `$${(data.today.total_amount || 0).toFixed(2)}`;
+                document.getElementById('today-possibly-fraudulent').textContent = data.today.possibly_fraudulent || 0;
+                document.getElementById('today-fraudulent').textContent = data.today.fraudulent || 0;
+            }
+            
+            // Actualizar gráficos
+            if (data.last_month && transactionsChart) {
+                updateTransactionsChart(data.last_month.daily_distribution);
+            }
+            
+            if (data.last_month && statusChart) {
+                updateStatusChart(data.last_month);
+            }
+            
+            // Actualizar transacciones recientes si es necesario
+            updateRecentTransactions();
+            
+            // Remover indicador de carga
+            document.querySelectorAll('.stat-value').forEach(el => {
+                el.classList.remove('updating');
+            });
+        })
+        .catch(error => {
+            console.error('Error actualizando estadísticas:', error);
+            
+            // Remover indicador de carga en caso de error
+            document.querySelectorAll('.stat-value').forEach(el => {
+                el.classList.remove('updating');
+            });
+            
+            // Mostrar notificación de error (opcional)
+            if (window.alert) {
+                console.log('Error al actualizar estadísticas. Por favor, verifica tu conexión.');
+            }
+        });
+    }
+
+    // Función para actualizar el gráfico de transacciones
+    function updateTransactionsChart(dailyDistribution) {
+        if (!dailyDistribution || !transactionsChart) return;
+        
+        const sortedDates = Object.keys(dailyDistribution).sort();
+        const dailyValues = sortedDates.map(date => dailyDistribution[date] || 0);
+        
+        const formattedDates = sortedDates.map(date => {
+            const [year, month, day] = date.split('-');
+            return `${day}/${month}`;
+        });
+        
+        transactionsChart.data.labels = formattedDates;
+        transactionsChart.data.datasets[0].data = dailyValues;
+        transactionsChart.update();
+    }
+
+    // Función para actualizar el gráfico de estado
+    function updateStatusChart(monthStats) {
+        if (!monthStats || !statusChart) return;
+        
+        const newData = [
+            monthStats.legitimate || 0,
+            monthStats.possibly_fraudulent || 0,
+            monthStats.fraudulent || 0
+        ];
+        
+        statusChart.data.datasets[0].data = newData;
+        statusChart.update();
+    }
+
+    // Función para actualizar transacciones recientes
+    function updateRecentTransactions() {
+        fetch('{% url "recent_transactions" %}?status=fraudulent&limit=10', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.transactions) {
+                updateTransactionsTable(data.transactions);
+            }
+        })
+        .catch(error => {
+            console.error('Error actualizando transacciones recientes:', error);
+        });
+    }
+
+    // Función para actualizar la tabla de transacciones
+    function updateTransactionsTable(transactions) {
+        const tbody = document.getElementById('fraud-transactions-tbody');
+        if (!tbody) return;
+        
+        // Solo actualizar si hay nuevas transacciones
+        if (transactions.length === 0) return;
+        
+        // Crear HTML para las nuevas filas
+        let html = '';
+        transactions.forEach(trans => {
+            const date = new Date(trans.created_at);
+            const formattedDate = date.toLocaleString('es-CO', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            let statusBadge = '';
+            if (trans.status === 'legitimate') {
+                statusBadge = '<span class="badge bg-success">Legítima</span>';
+            } else if (trans.status === 'possibly_fraudulent') {
+                statusBadge = '<span class="badge bg-warning text-dark">Revisión</span>';
+            } else {
+                statusBadge = '<span class="badge bg-danger">Fraudulenta</span>';
+            }
+            
+            html += `
+                <tr>
+                    <td>${trans.id}</td>
+                    <td>${formattedDate}</td>
+                    <td>${trans.sender_name}</td>
+                    <td>${trans.receiver_name}</td>
+                    <td>$${trans.amount.toFixed(2)}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <a href="{% url 'admin_transactions' %}?id=${trans.id}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-search me-1"></i>Ver
+                        </a>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        // Actualizar tabla solo si hay cambios
+        if (html) {
+            tbody.innerHTML = html;
+        }
+    }
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Esperar a que el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM cargado, inicializando dashboard...');
+        
+        // Verificar que Chart.js esté disponible
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js no está cargado');
+            return;
+        }
+        
+        // Inicializar gráficos
+        initializeCharts();
+        
+        // Configurar actualización automática cada 30 segundos
+        updateInterval = setInterval(function() {
+            console.log('Auto-actualización programada...');
+            updateDashboardStats();
+        }, 30000);
+        
+        // Actualizar estadísticas al cargar
+        setTimeout(function() {
+            updateDashboardStats();
+        }, 1000);
+    });
+    
+    // Limpiar intervalo cuando se abandona la página
+    window.addEventListener('beforeunload', function() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
+</script>
+{% endblock %}

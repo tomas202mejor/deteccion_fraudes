@@ -1,0 +1,270 @@
+<!-- frontend/templates/registration/login.html -->
+{% extends 'base.html' %}
+
+{% block title %}Iniciar Sesión | Sistema de Detección de Fraude{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+    }
+    .login-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .login-header {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        border-radius: 15px 15px 0 0;
+        padding: 2rem;
+    }
+    .form-control {
+        border-radius: 10px;
+        border: 2px solid #e3e6f0;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    .btn-login {
+        border-radius: 10px;
+        padding: 0.75rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        border: none;
+    }
+    .btn-login:hover {
+        background: linear-gradient(135deg, #224abe 0%, #1e3a8a 100%);
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+    .input-group-text {
+        border-radius: 10px 0 0 10px;
+        border: 2px solid #e3e6f0;
+        border-right: none;
+        background-color: #f8f9fc;
+    }
+    .input-group .form-control {
+        border-radius: 0 10px 10px 0;
+        border-left: none;
+    }
+    .input-group:focus-within .input-group-text {
+        border-color: #4e73df;
+    }
+    .password-toggle {
+        border: 2px solid #e3e6f0;
+        border-left: none;
+        border-radius: 0 10px 10px 0;
+        background-color: #f8f9fc;
+    }
+    .input-group:focus-within .password-toggle {
+        border-color: #4e73df;
+    }
+    .invalid-feedback {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+    }
+    .form-control.is-invalid {
+        border-color: #e74a3b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container login-container">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-6 col-lg-5">
+            <div class="card login-card">
+                <div class="login-header text-white text-center">
+                    <i class="fas fa-shield-alt fa-3x mb-3"></i>
+                    <h3 class="mb-0">Bienvenido</h3>
+                    <p class="mb-0 opacity-75">Inicia sesión en tu cuenta</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="loginForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-bold">Correo Electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope text-muted"></i>
+                                </span>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       placeholder="tu-email@ejemplo.com"
+                                       required 
+                                       autofocus>
+                            </div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label fw-bold">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock text-muted"></i>
+                                </span>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       name="password" 
+                                       placeholder="Ingresa tu contraseña"
+                                       required>
+                                <button class="btn btn-outline-secondary password-toggle" 
+                                        type="button" 
+                                        id="togglePassword">
+                                    <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-login" id="loginBtn">
+                                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                            </button>
+                        </div>
+                        
+                        <!-- Casos de prueba rápido -->
+                        <div class="text-center mb-3">
+                            <small class="text-muted">
+                                <strong>Cuentas de prueba:</strong><br>
+                                <button type="button" class="btn btn-link btn-sm p-0" onclick="fillTestUser()">
+                                    Usuario: user@example.com | 12345678A!
+                                </button><br>
+                                <button type="button" class="btn btn-link btn-sm p-0" onclick="fillTestAdmin()">
+                                    Admin: admin@example.com | Admin123!
+                                </button>
+                            </small>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'password_reset' %}" class="text-decoration-none">
+                            <i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?
+                        </a>
+                        <a href="{% url 'register' %}" class="text-decoration-none">
+                            <i class="fas fa-user-plus me-1"></i>Crear cuenta
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+    
+    // Toggle password visibility
+    togglePassword.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        togglePasswordIcon.classList.toggle('fa-eye');
+        togglePasswordIcon.classList.toggle('fa-eye-slash');
+    });
+    
+    // Validación básica
+    function validateEmail() {
+        const email = emailInput.value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!email) {
+            setInvalid(emailInput, 'El correo electrónico es obligatorio');
+            return false;
+        }
+        
+        if (!emailRegex.test(email)) {
+            setInvalid(emailInput, 'Por favor ingresa un correo electrónico válido');
+            return false;
+        }
+        
+        setValid(emailInput);
+        return true;
+    }
+    
+    function validatePassword() {
+        const password = passwordInput.value;
+        
+        if (!password) {
+            setInvalid(passwordInput, 'La contraseña es obligatoria');
+            return false;
+        }
+        
+        setValid(passwordInput);
+        return true;
+    }
+    
+    function setValid(element) {
+        element.classList.remove('is-invalid');
+        const feedback = element.parentNode.parentNode.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.textContent = '';
+        }
+    }
+    
+    function setInvalid(element, message) {
+        element.classList.add('is-invalid');
+        const feedback = element.parentNode.parentNode.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.textContent = message;
+        }
+    }
+    
+    // Validación en tiempo real
+    emailInput.addEventListener('blur', validateEmail);
+    passwordInput.addEventListener('blur', validatePassword);
+    
+    // Manejar envío del formulario
+    form.addEventListener('submit', function(e) {
+        const emailValid = validateEmail();
+        const passwordValid = validatePassword();
+        
+        if (!emailValid || !passwordValid) {
+            e.preventDefault();
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+            }
+            return false;
+        }
+        
+        // Deshabilitar botón para evitar envío doble
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
+        
+        // El formulario se enviará normalmente
+        return true;
+    });
+    
+    // Funciones para llenar datos de prueba
+    window.fillTestUser = function() {
+        emailInput.value = 'user@example.com';
+        passwordInput.value = '12345678A!';
+    };
+    
+    window.fillTestAdmin = function() {
+        emailInput.value = 'admin@example.com';
+        passwordInput.value = 'Admin123!';
+    };
+});
+</script>
+{% endblock %}
